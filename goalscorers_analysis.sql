@@ -21,23 +21,24 @@ WHERE minute_scored is NULL;
 # get the 1st goal scored in each match, join with the results table and get the match outcome
 WITH
 first_goals AS (SELECT s.match_date, CONCAT(s.home_team, ' vs ', s.away_team) as match_game,
-		s.team_scored, s.scorer, r.home_score, r.away_score,
-        (CASE WHEN (r.home_score > r.away_score) THEN r.home_team
+				s.team_scored, s.scorer, r.home_score, r.away_score,
+				(CASE WHEN (r.home_score > r.away_score) THEN r.home_team
 					WHEN (r.away_score > r.home_score) THEN r.away_team
                     ELSE 'Draw'
 				END ) AS winner
 FROM (SELECT *, 
-		ROW_NUMBER() OVER (partition by match_date, home_team, away_team ORDER BY minute_scored) as goals_ordered
-FROM goalscorers) s LEFT JOIN results r
+	  ROW_NUMBER() OVER (partition by match_date, home_team, away_team ORDER BY minute_scored) as goals_ordered
+	  FROM goalscorers) s LEFT JOIN results r
 ON (s.match_date = r.match_date) AND (s.home_team = r.home_team) AND (s.away_team = r.away_team)
 WHERE (s.match_date > '1997-03-31') and (s.goals_ordered = 1)),
 
 first_goals_results AS (SELECT match_date, match_game, team_scored, scorer, winner,
-		(CASE WHEN team_scored = winner THEN '1st goal won'
-			  WHEN winner = 'Draw' THEN 'Draw' 
-			  ELSE '1st goal lost'END)  AS first_goal_winner
+								(CASE WHEN team_scored = winner THEN '1st goal won'
+									  WHEN winner = 'Draw' THEN 'Draw' 
+									  ELSE '1st goal lost'END)  AS first_goal_winner
 FROM first_goals)
 
+# find pct of matches won
 SELECT first_goal_winner, COUNT(*) AS num_outcome, 
 		ROUND(((COUNT(*) / SUM(COUNT(*)) OVER()) * 100.0), 2) AS pct_of_matches
 FROM first_goals_results
@@ -45,14 +46,13 @@ GROUP BY first_goal_winner;
 
 
 
-
-
-
+# match row counts for original table
+# to compare with the rows on the joined tables to see if there was any errors when joined
 SELECT COUNT(DISTINCT match_date, home_team, away_team) FROM goalscorers
 WHERE match_date > '1997-03-31';
 
 
-
+# get column names
 DESCRIBE goalscorers;
 SELECT * FROM results;
 
